@@ -8,20 +8,17 @@
    ========================================================= */
 
 /*
- * Cloudflare Worker URL.
+ * Cloudflare Worker URL
  *
  * IMPORTANT:
- * Do NOT put your OpenAI API key in this file.
- * The API key should remain inside Cloudflare Worker secrets.
+ * Do NOT put your OpenAI API key here.
  */
 
 const WORKER_URL =
   "https://08-prj-loreal-chatbot.asien003.workers.dev";
 
 
-/* =========================================================
-   LOCAL STORAGE KEYS
-   ========================================================= */
+/* LocalStorage keys */
 
 const PRODUCTS_STORAGE_KEY =
   "loreal-selected-products";
@@ -72,41 +69,26 @@ const rtlToggle =
 
 
 /* =========================================================
-   BASIC DOM VALIDATION
+   BASIC DOM CHECK
    ========================================================= */
 
-/*
- * This helps prevent confusing errors if an HTML element
- * is missing or has the wrong ID.
- */
-
-const requiredElements = {
-  categoryFilter,
-  productSearch,
-  productsContainer,
-  selectedProductsList,
-  generateRoutineBtn,
-  clearSelectionsBtn,
-  productCount,
-  chatForm,
-  chatWindow,
-  userInput,
-  rtlToggle
-};
-
-Object.entries(requiredElements).forEach(
-  ([name, element]) => {
-
-    if (!element) {
-
-      console.error(
-        `Missing required HTML element: ${name}`
-      );
-
-    }
-
-  }
-);
+if (
+  !categoryFilter ||
+  !productSearch ||
+  !productsContainer ||
+  !selectedProductsList ||
+  !generateRoutineBtn ||
+  !clearSelectionsBtn ||
+  !productCount ||
+  !chatForm ||
+  !chatWindow ||
+  !userInput ||
+  !rtlToggle
+) {
+  console.error(
+    "L'Oréal Advisor: One or more required HTML elements were not found."
+  );
+}
 
 
 /* =========================================================
@@ -117,31 +99,11 @@ let allProducts = [];
 
 
 /* =========================================================
-   RESTORE SELECTED PRODUCTS
+   SAFE LOCAL STORAGE HELPERS
    ========================================================= */
 
-let selectedProductIds = loadStoredArray(
-  PRODUCTS_STORAGE_KEY
-);
-
-
-/* =========================================================
-   RESTORE CHAT HISTORY
-   ========================================================= */
-
-let conversationHistory = loadStoredArray(
-  CHAT_STORAGE_KEY
-);
-
-
-/* =========================================================
-   SAFE LOCAL STORAGE LOADER
-   ========================================================= */
-
-function loadStoredArray(key) {
-
+function getStoredArray(key) {
   try {
-
     const stored =
       localStorage.getItem(key);
 
@@ -157,16 +119,75 @@ function loadStoredArray(key) {
       : [];
 
   } catch (error) {
-
     console.error(
-      `Unable to read localStorage key "${key}":`,
+      `Unable to read localStorage key: ${key}`,
       error
     );
 
     return [];
-
   }
+}
 
+
+/*
+ * Restore selected products.
+ */
+
+let selectedProductIds =
+  getStoredArray(
+    PRODUCTS_STORAGE_KEY
+  );
+
+
+/*
+ * Restore conversation history.
+ */
+
+let conversationHistory =
+  getStoredArray(
+    CHAT_STORAGE_KEY
+  );
+
+
+/* =========================================================
+   SAVE PRODUCT SELECTIONS
+   ========================================================= */
+
+function saveSelections() {
+  try {
+    localStorage.setItem(
+      PRODUCTS_STORAGE_KEY,
+      JSON.stringify(
+        selectedProductIds
+      )
+    );
+  } catch (error) {
+    console.error(
+      "Unable to save product selections:",
+      error
+    );
+  }
+}
+
+
+/* =========================================================
+   SAVE CHAT HISTORY
+   ========================================================= */
+
+function saveChatHistory() {
+  try {
+    localStorage.setItem(
+      CHAT_STORAGE_KEY,
+      JSON.stringify(
+        conversationHistory
+      )
+    );
+  } catch (error) {
+    console.error(
+      "Unable to save chat history:",
+      error
+    );
+  }
 }
 
 
@@ -175,9 +196,7 @@ function loadStoredArray(key) {
    ========================================================= */
 
 async function loadProducts() {
-
   try {
-
     const response =
       await fetch(
         "products.json",
@@ -186,88 +205,66 @@ async function loadProducts() {
         }
       );
 
-
     if (!response.ok) {
-
       throw new Error(
-        `Unable to load products.json (${response.status})`
+        `Unable to load products.json. HTTP ${response.status}`
       );
-
     }
-
 
     const data =
       await response.json();
-
 
     if (
       !data ||
       !Array.isArray(data.products)
     ) {
-
       throw new Error(
         "products.json does not contain a valid products array."
       );
-
     }
-
 
     allProducts =
       data.products;
 
-
     /*
-     * Remove saved product IDs that no longer
-     * exist in products.json.
+     * Remove selected IDs that
+     * no longer exist in products.json.
      */
 
-    const validIds =
+    const validProductIds =
       new Set(
         allProducts.map(
           product => product.id
         )
       );
 
-
     selectedProductIds =
       selectedProductIds.filter(
-        id => validIds.has(id)
+        id =>
+          validProductIds.has(id)
       );
 
-
     saveSelections();
-
 
     renderProducts();
 
     renderSelectedProducts();
 
-
   } catch (error) {
-
     console.error(
       "Product loading error:",
       error
     );
 
-
-    if (productsContainer) {
-
-      productsContainer.innerHTML = `
-        <div class="no-results">
-
-          <p>
-            Unable to load the product catalog.
-            Please refresh the page and try again.
-          </p>
-
-        </div>
-      `;
-
-    }
-
+    productsContainer.innerHTML = `
+      <div class="no-results">
+        <p>
+          Unable to load the product catalog.
+          Please refresh the page and try again.
+        </p>
+      </div>
+    `;
   }
-
 }
 
 
@@ -276,28 +273,15 @@ async function loadProducts() {
    ========================================================= */
 
 function getFilteredProducts() {
-
-  if (
-    !categoryFilter ||
-    !productSearch
-  ) {
-
-    return allProducts;
-
-  }
-
-
   const category =
     categoryFilter.value
       .trim()
       .toLowerCase();
 
-
   const search =
     productSearch.value
       .trim()
       .toLowerCase();
-
 
   return allProducts.filter(
     product => {
@@ -305,15 +289,11 @@ function getFilteredProducts() {
       const productCategory =
         String(
           product.category || ""
-        )
-        .trim()
-        .toLowerCase();
-
+        ).toLowerCase();
 
       const categoryMatches =
         !category ||
         productCategory === category;
-
 
       const searchableText = `
         ${product.name || ""}
@@ -322,20 +302,18 @@ function getFilteredProducts() {
         ${product.description || ""}
       `.toLowerCase();
 
-
       const searchMatches =
         !search ||
-        searchableText.includes(search);
-
+        searchableText.includes(
+          search
+        );
 
       return (
         categoryMatches &&
         searchMatches
       );
-
     }
   );
-
 }
 
 
@@ -344,43 +322,20 @@ function getFilteredProducts() {
    ========================================================= */
 
 function renderProducts() {
-
-  if (!productsContainer) {
-    return;
-  }
-
-
   const products =
     getFilteredProducts();
 
-
-  /*
-   * Update product count.
-   */
-
-  if (productCount) {
-
-    productCount.textContent =
-      `${products.length} ${
-        products.length === 1
-          ? "product"
-          : "products"
-      }`;
-
-  }
-
-
-  /*
-   * No products found.
-   */
+  productCount.textContent =
+    `${products.length} ${
+      products.length === 1
+        ? "product"
+        : "products"
+    }`;
 
   if (!products.length) {
-
     productsContainer.innerHTML = `
       <div class="no-results">
-
         <div>
-
           <i
             class="fa-solid fa-face-frown"
           ></i>
@@ -388,163 +343,149 @@ function renderProducts() {
           <p>
             No products match your search.
           </p>
-
         </div>
-
       </div>
     `;
 
     return;
-
   }
-
-
-  /*
-   * Render product cards.
-   */
 
   productsContainer.innerHTML =
     products
-      .map(
-        product => {
+      .map(product => {
 
-          const selected =
-            selectedProductIds.includes(
+        const selected =
+          selectedProductIds.includes(
+            product.id
+          );
+
+        const productName =
+          escapeHtml(
+            product.name || ""
+          );
+
+        const productBrand =
+          escapeHtml(
+            product.brand || ""
+          );
+
+        const productImage =
+          escapeHtml(
+            product.image || ""
+          );
+
+        const productDescription =
+          escapeHtml(
+            product.description || ""
+          );
+
+        return `
+          <article
+            class="product-card ${
+              selected
+                ? "selected"
+                : ""
+            }"
+            data-id="${escapeHtml(
               product.id
-            );
+            )}"
+          >
 
-
-          const productId =
-            escapeHtml(product.id);
-
-
-          const productName =
-            escapeHtml(
-              product.name || ""
-            );
-
-
-          const productBrand =
-            escapeHtml(
-              product.brand || ""
-            );
-
-
-          const productImage =
-            escapeHtml(
-              product.image || ""
-            );
-
-
-          const productDescription =
-            escapeHtml(
-              product.description || ""
-            );
-
-
-          return `
-            <article
-              class="product-card ${
-                selected
-                  ? "selected"
-                  : ""
-              }"
-              data-id="${productId}"
+            <div
+              class="product-image-wrap"
             >
 
+              ${
+                selected
+                  ? `
+                    <div
+                      class="selected-badge"
+                    >
+                      <i
+                        class="fa-solid fa-check"
+                      ></i>
+                    </div>
+                  `
+                  : ""
+              }
+
+              <img
+                src="${productImage}"
+                alt="${productName}"
+                loading="lazy"
+              />
+
+            </div>
+
+
+            <div class="product-info">
+
+              <span
+                class="product-brand"
+              >
+                ${productBrand}
+              </span>
+
+
+              <h3
+                class="product-name"
+              >
+                ${productName}
+              </h3>
+
+
               <div
-                class="product-image-wrap"
+                class="product-actions"
               >
 
-                ${
-                  selected
-                    ? `
-                      <div
-                        class="selected-badge"
-                      >
-                        <i
-                          class="fa-solid fa-check"
-                        ></i>
-                      </div>
-                    `
-                    : ""
-                }
+                <button
+                  class="select-btn"
+                  type="button"
+                  data-select="${escapeHtml(
+                    product.id
+                  )}"
+                >
+                  ${
+                    selected
+                      ? "Selected ✓"
+                      : "Add to routine"
+                  }
+                </button>
 
 
-                <img
-                  src="${productImage}"
-                  alt="${productName}"
-                  loading="lazy"
-                />
+                <button
+                  class="details-toggle"
+                  type="button"
+                  title="View product description"
+                  aria-label="View product description"
+                  data-details="${escapeHtml(
+                    product.id
+                  )}"
+                >
+                  <i
+                    class="fa-solid fa-info"
+                  ></i>
+                </button>
 
               </div>
 
 
-              <div class="product-info">
-
-                <span
-                  class="product-brand"
-                >
-                  ${productBrand}
-                </span>
-
-
-                <h3
-                  class="product-name"
-                >
-                  ${productName}
-                </h3>
-
-
-                <div
-                  class="product-actions"
-                >
-
-                  <button
-                    class="select-btn"
-                    type="button"
-                    data-select="${productId}"
-                  >
-                    ${
-                      selected
-                        ? "Selected ✓"
-                        : "Add to routine"
-                    }
-                  </button>
-
-
-                  <button
-                    class="details-toggle"
-                    type="button"
-                    title="View product description"
-                    aria-label="View product description"
-                    data-details="${productId}"
-                  >
-                    <i
-                      class="fa-solid fa-info"
-                    ></i>
-                  </button>
-
-                </div>
-
-
-                <div
-                  class="product-description"
-                  id="description-${productId}"
-                  hidden
-                >
-                  ${productDescription}
-                </div>
-
+              <div
+                class="product-description"
+                id="description-${escapeHtml(
+                  product.id
+                )}"
+                hidden
+              >
+                ${productDescription}
               </div>
 
-            </article>
-          `;
+            </div>
 
-        }
-      )
+          </article>
+        `;
+      })
       .join("");
-
 }
 
 
@@ -552,114 +493,80 @@ function renderProducts() {
    PRODUCT CARD CLICK EVENTS
    ========================================================= */
 
-if (productsContainer) {
+productsContainer.addEventListener(
+  "click",
+  event => {
 
-  productsContainer.addEventListener(
-    "click",
-    event => {
+    /*
+     * Add / remove product button
+     */
 
-      /*
-       * Add / remove product.
-       */
+    const selectButton =
+      event.target.closest(
+        "[data-select]"
+      );
 
-      const selectButton =
-        event.target.closest(
-          "[data-select]"
+    if (selectButton) {
+      const id =
+        normalizeProductId(
+          selectButton.dataset.select
         );
 
+      toggleProduct(id);
 
-      if (selectButton) {
-
-        const id =
-          normalizeProductId(
-            selectButton.dataset.select
-          );
-
-
-        if (id !== null) {
-
-          toggleProduct(id);
-
-        }
-
-
-        return;
-
-      }
-
-
-      /*
-       * Product description button.
-       */
-
-      const detailsButton =
-        event.target.closest(
-          "[data-details]"
-        );
-
-
-      if (detailsButton) {
-
-        const id =
-          normalizeProductId(
-            detailsButton.dataset.details
-          );
-
-
-        if (id === null) {
-          return;
-        }
-
-
-        const description =
-          document.getElementById(
-            `description-${id}`
-          );
-
-
-        if (description) {
-
-          description.hidden =
-            !description.hidden;
-
-        }
-
-
-        return;
-
-      }
-
-
-      /*
-       * Clicking the card itself selects it.
-       */
-
-      const card =
-        event.target.closest(
-          ".product-card"
-        );
-
-
-      if (card) {
-
-        const id =
-          normalizeProductId(
-            card.dataset.id
-          );
-
-
-        if (id !== null) {
-
-          toggleProduct(id);
-
-        }
-
-      }
-
+      return;
     }
-  );
 
-}
+
+    /*
+     * Product description button
+     */
+
+    const detailsButton =
+      event.target.closest(
+        "[data-details]"
+      );
+
+    if (detailsButton) {
+      const id =
+        normalizeProductId(
+          detailsButton.dataset.details
+        );
+
+      const description =
+        document.getElementById(
+          `description-${id}`
+        );
+
+      if (description) {
+        description.hidden =
+          !description.hidden;
+      }
+
+      return;
+    }
+
+
+    /*
+     * Clicking the product card itself
+     * selects / deselects the product.
+     */
+
+    const card =
+      event.target.closest(
+        ".product-card"
+      );
+
+    if (card) {
+      const id =
+        normalizeProductId(
+          card.dataset.id
+        );
+
+      toggleProduct(id);
+    }
+  }
+);
 
 
 /* =========================================================
@@ -667,30 +574,21 @@ if (productsContainer) {
    ========================================================= */
 
 function normalizeProductId(value) {
-
   /*
-   * Keep numeric IDs working with your existing
-   * products.json structure.
+   * Keep numeric IDs numeric.
+   * Keep string IDs as strings.
    */
 
-  const numericId =
-    Number(value);
-
-
   if (
-    value === undefined ||
-    value === null ||
-    value === "" ||
-    Number.isNaN(numericId)
+    value !== null &&
+    value !== undefined &&
+    value !== "" &&
+    !Number.isNaN(Number(value))
   ) {
-
-    return null;
-
+    return Number(value);
   }
 
-
-  return numericId;
-
+  return value;
 }
 
 
@@ -699,30 +597,38 @@ function normalizeProductId(value) {
    ========================================================= */
 
 function toggleProduct(id) {
+  const existingIndex =
+    selectedProductIds.findIndex(
+      productId =>
+        String(productId) ===
+        String(id)
+    );
 
-  if (
-    selectedProductIds.includes(id)
-  ) {
+  if (existingIndex !== -1) {
 
-    selectedProductIds =
-      selectedProductIds.filter(
-        productId =>
-          productId !== id
-      );
+    /*
+     * Remove product.
+     */
+
+    selectedProductIds.splice(
+      existingIndex,
+      1
+    );
 
   } else {
 
+    /*
+     * Add product.
+     */
+
     selectedProductIds.push(id);
-
   }
-
 
   saveSelections();
 
   renderProducts();
 
   renderSelectedProducts();
-
 }
 
 
@@ -731,14 +637,14 @@ function toggleProduct(id) {
    ========================================================= */
 
 function getSelectedProducts() {
-
   return allProducts.filter(
     product =>
-      selectedProductIds.includes(
-        product.id
+      selectedProductIds.some(
+        id =>
+          String(id) ===
+          String(product.id)
       )
   );
-
 }
 
 
@@ -747,22 +653,10 @@ function getSelectedProducts() {
    ========================================================= */
 
 function renderSelectedProducts() {
-
-  if (!selectedProductsList) {
-    return;
-  }
-
-
   const selectedProducts =
     getSelectedProducts();
 
-
-  /*
-   * Nothing selected.
-   */
-
   if (!selectedProducts.length) {
-
     selectedProductsList.innerHTML = `
       <div class="empty-selection">
 
@@ -779,27 +673,24 @@ function renderSelectedProducts() {
     `;
 
     return;
-
   }
-
-
-  /*
-   * Display selected products.
-   */
 
   selectedProductsList.innerHTML =
     selectedProducts
-      .map(
-        product => `
+      .map(product => {
 
+        const name =
+          escapeHtml(
+            product.name || ""
+          );
+
+        return `
           <div
             class="selected-item"
           >
 
             <span>
-              ${escapeHtml(
-                product.name || ""
-              )}
+              ${name}
             </span>
 
 
@@ -809,9 +700,7 @@ function renderSelectedProducts() {
               data-remove="${escapeHtml(
                 product.id
               )}"
-              aria-label="Remove ${escapeHtml(
-                product.name || ""
-              )}"
+              aria-label="Remove ${name}"
             >
 
               <i
@@ -821,229 +710,132 @@ function renderSelectedProducts() {
             </button>
 
           </div>
-
-        `
-      )
+        `;
+      })
       .join("");
-
 }
 
 
 /* =========================================================
-   REMOVE SELECTED PRODUCT
+   REMOVE FROM SELECTED LIST
    ========================================================= */
 
-if (selectedProductsList) {
+selectedProductsList.addEventListener(
+  "click",
+  event => {
 
-  selectedProductsList.addEventListener(
-    "click",
-    event => {
+    const button =
+      event.target.closest(
+        "[data-remove]"
+      );
 
-      const button =
-        event.target.closest(
-          "[data-remove]"
-        );
-
-
-      if (!button) {
-        return;
-      }
-
-
-      const id =
-        normalizeProductId(
-          button.dataset.remove
-        );
-
-
-      if (id !== null) {
-
-        toggleProduct(id);
-
-      }
-
+    if (!button) {
+      return;
     }
-  );
 
-}
+    const id =
+      normalizeProductId(
+        button.dataset.remove
+      );
+
+    toggleProduct(id);
+  }
+);
 
 
 /* =========================================================
    CLEAR ALL SELECTIONS
    ========================================================= */
 
-if (clearSelectionsBtn) {
+clearSelectionsBtn.addEventListener(
+  "click",
+  () => {
 
-  clearSelectionsBtn.addEventListener(
-    "click",
-    () => {
+    selectedProductIds = [];
 
-      selectedProductIds = [];
+    saveSelections();
 
+    renderProducts();
 
-      saveSelections();
-
-      renderProducts();
-
-      renderSelectedProducts();
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   SAVE PRODUCT SELECTIONS
-   ========================================================= */
-
-function saveSelections() {
-
-  try {
-
-    localStorage.setItem(
-      PRODUCTS_STORAGE_KEY,
-      JSON.stringify(
-        selectedProductIds
-      )
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Unable to save selected products:",
-      error
-    );
-
+    renderSelectedProducts();
   }
-
-}
+);
 
 
 /* =========================================================
    SEARCH / FILTER EVENTS
    ========================================================= */
 
-if (categoryFilter) {
+categoryFilter.addEventListener(
+  "change",
+  renderProducts
+);
 
-  categoryFilter.addEventListener(
-    "change",
-    renderProducts
-  );
-
-}
-
-
-if (productSearch) {
-
-  productSearch.addEventListener(
-    "input",
-    renderProducts
-  );
-
-}
+productSearch.addEventListener(
+  "input",
+  renderProducts
+);
 
 
 /* =========================================================
    GENERATE PERSONALIZED ROUTINE
    ========================================================= */
 
-if (generateRoutineBtn) {
-
-  generateRoutineBtn.addEventListener(
-    "click",
-    generateRoutine
-  );
-
-}
-
-
-/* =========================================================
-   ROUTINE GENERATION FUNCTION
-   ========================================================= */
-
-async function generateRoutine() {
-
-  /*
-   * Get ONLY selected products.
-   */
-
-  const selectedProducts =
-    getSelectedProducts();
-
-
-  /*
-   * Require at least one product.
-   */
-
-  if (!selectedProducts.length) {
-
-    addAssistantMessage(
-      "Please select at least one product before generating a routine."
-    );
-
-    return;
-
-  }
-
-
-  /*
-   * Send only necessary product information.
-   */
-
-  const productData =
-    selectedProducts.map(
-      product => ({
-        name:
-          product.name || "",
-
-        brand:
-          product.brand || "",
-
-        category:
-          product.category || "",
-
-        description:
-          product.description || ""
-      })
-    );
-
-
-  /*
-   * Disable button.
-   */
-
-  generateRoutineBtn.disabled =
-    true;
-
-
-  generateRoutineBtn.innerHTML = `
-    <i
-      class="fa-solid fa-spinner fa-spin"
-    ></i>
-
-    Creating Your Routine...
-  `;
-
-
-  /*
-   * Display loading message.
-   */
-
-  const thinkingMessage =
-    addAssistantMessage(
-      "I'm creating your personalized routine..."
-    );
-
-
-  try {
+generateRoutineBtn.addEventListener(
+  "click",
+  async () => {
 
     /*
-     * Create messages for OpenAI.
+     * Get selected products.
+     */
+
+    const selectedProducts =
+      getSelectedProducts();
+
+
+    /*
+     * Require at least one product.
+     */
+
+    if (!selectedProducts.length) {
+
+      addAssistantMessage(
+        "Please select at least one product before generating a routine."
+      );
+
+      return;
+    }
+
+
+    /*
+     * Only send useful product information
+     * to the Cloudflare Worker.
+     */
+
+    const productData =
+      selectedProducts.map(
+        product => ({
+          name:
+            product.name || "",
+
+          brand:
+            product.brand || "",
+
+          category:
+            product.category || "",
+
+          description:
+            product.description || ""
+        })
+      );
+
+
+    /*
+     * Create the messages that the
+     * Cloudflare Worker expects.
      */
 
     const routineMessages = [
-
       {
         role: "system",
 
@@ -1052,563 +844,601 @@ You are an expert L'Oréal beauty advisor.
 
 Create a personalized beauty routine using ONLY the products provided by the user.
 
-Do not invent products.
+Do not recommend products that are not included in the user's selected products.
 
-For every selected product, explain:
+Explain:
 
-1. The order in which it should be used.
-2. Whether it should be used in the morning, evening, or both.
-3. How often it should be used.
-4. Important usage or compatibility considerations.
+1. The order in which the products should be used.
+2. Whether each product should be used in the morning, evening, or both.
+3. How often each product should be used.
+4. Any important usage or compatibility considerations.
+5. Any important precautions based only on the provided product information.
 
 Organize the routine clearly.
 
-Separate the routine into:
-- Morning
-- Evening
-- Weekly / occasional use, if appropriate
+Use simple headings and numbered steps so the user can easily follow the routine.
 
-Only include products supplied by the user.
-
-If there is not enough information to determine a safe frequency or compatibility, say so rather than inventing details.
-
-Keep the answer practical and easy to follow.
-`
+The user's selected products are provided in the next message.
+        `
       },
 
       {
         role: "user",
 
         content: `
-Please create my personalized beauty routine using these selected products:
+Please create my personalized beauty routine using ONLY these selected products:
 
 ${JSON.stringify(
   productData,
   null,
   2
 )}
-`
+        `
       }
-
     ];
 
 
     /*
-     * Send request to Cloudflare Worker.
+     * Disable button while loading.
      */
 
-    const response =
-      await fetch(
-        `${WORKER_URL}/routine`,
-        {
-          method: "POST",
+    generateRoutineBtn.disabled =
+      true;
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+    generateRoutineBtn.innerHTML = `
+      <i
+        class="fa-solid fa-spinner fa-spin"
+      ></i>
 
-          body: JSON.stringify({
-            messages:
-              routineMessages
-          })
-        }
-      );
+      Creating Your Routine...
+    `;
 
 
     /*
-     * Parse response.
+     * Display loading message.
      */
 
-    const data =
-      await response
-        .json()
-        .catch(
-          () => ({})
+    const thinkingMessage =
+      addAssistantMessage(
+        "I'm creating your personalized routine..."
+      );
+
+
+    try {
+
+      /*
+       * Send request to:
+       *
+       * /routine
+       */
+
+      const response =
+        await fetch(
+          `${WORKER_URL}/routine`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+              messages:
+                routineMessages
+            })
+          }
         );
 
 
-    /*
-     * Handle Worker/OpenAI errors.
-     */
+      /*
+       * Read JSON response.
+       */
 
-    if (!response.ok) {
+      const data =
+        await readJsonResponse(
+          response
+        );
+
+
+      console.log(
+        "Routine response from Worker:",
+        data
+      );
+
+
+      /*
+       * If Worker/OpenAI returned an error,
+       * show the actual error.
+       */
+
+      if (!response.ok) {
+
+        const workerError =
+          getWorkerErrorMessage(
+            data
+          );
+
+        throw new Error(
+          workerError
+        );
+      }
+
+
+      /*
+       * IMPORTANT:
+       *
+       * The Cloudflare Worker returns:
+       *
+       * {
+       *   answer: "..."
+       * }
+       *
+       * So we read data.answer first.
+       */
+
+      const routine =
+        extractAnswer(
+          data
+        );
+
+
+      /*
+       * Make sure we actually received
+       * a routine.
+       */
+
+      if (!routine) {
+
+        console.error(
+          "Unexpected routine response:",
+          data
+        );
+
+        throw new Error(
+          "The Worker returned an empty routine response."
+        );
+      }
+
+
+      /*
+       * Remove loading message.
+       */
+
+      thinkingMessage.remove();
+
+
+      /*
+       * Display routine.
+       */
+
+      addAssistantMessage(
+        routine
+      );
+
+
+      /*
+       * Save routine to conversation.
+       */
+
+      conversationHistory.push({
+        role: "assistant",
+        content: routine
+      });
+
+      saveChatHistory();
+
+
+    } catch (error) {
 
       console.error(
-        "Routine Worker error:",
-        data
+        "Routine generation error:",
+        error
       );
 
 
-      throw new Error(
-        getApiErrorMessage(
-          data,
-          "Routine request failed."
-        )
-      );
+      /*
+       * Show useful error message.
+       */
 
+      thinkingMessage.textContent =
+        `Sorry — I couldn't generate your routine. ${error.message || "Please try again."}`;
     }
 
-
-    /*
-     * Extract OpenAI response.
-     */
-
-    const routine =
-      extractAssistantMessage(
-        data
-      );
-
-
-    if (!routine) {
-
-      console.error(
-        "Unexpected routine response:",
-        data
-      );
-
-
-      throw new Error(
-        "The Worker returned an empty routine."
-      );
-
-    }
-
-
-    /*
-     * Remove loading message.
-     */
-
-    thinkingMessage.remove();
-
-
-    /*
-     * Display routine.
-     */
-
-    addAssistantMessage(
-      routine
-    );
-
-
-    /*
-     * Save routine to chat history.
-     */
-
-    conversationHistory.push({
-
-      role: "assistant",
-
-      content: routine
-
-    });
-
-
-    saveChatHistory();
-
-
-  } catch (error) {
-
-    console.error(
-      "Routine generation error:",
-      error
-    );
-
-
-    thinkingMessage.textContent =
-      `Sorry — I couldn't generate your routine. ${
-        error.message ||
-        "Please try again."
-      }`;
-
-  } finally {
 
     /*
      * Re-enable button.
      */
 
-    generateRoutineBtn.disabled =
-      false;
+    finally {
 
+      generateRoutineBtn.disabled =
+        false;
 
-    generateRoutineBtn.innerHTML = `
-      <i
-        class="fa-solid fa-wand-magic-sparkles"
-      ></i>
+      generateRoutineBtn.innerHTML = `
+        <i
+          class="fa-solid fa-wand-magic-sparkles"
+        ></i>
 
-      Generate My Routine
-    `;
-
+        Generate My Routine
+      `;
+    }
   }
-
-}
+);
 
 
 /* =========================================================
    CHAT FORM
    ========================================================= */
 
-if (chatForm) {
+chatForm.addEventListener(
+  "submit",
+  async event => {
 
-  chatForm.addEventListener(
-    "submit",
-    handleChatSubmit
-  );
-
-}
-
-
-/* =========================================================
-   CHAT SUBMISSION
-   ========================================================= */
-
-async function handleChatSubmit(event) {
-
-  event.preventDefault();
-
-
-  if (!userInput) {
-    return;
-  }
-
-
-  const message =
-    userInput.value.trim();
-
-
-  if (!message) {
-    return;
-  }
-
-
-  /*
-   * Display user's message.
-   */
-
-  addUserMessage(
-    message
-  );
-
-
-  /*
-   * Clear input.
-   */
-
-  userInput.value = "";
-
-
-  /*
-   * Save user message.
-   */
-
-  conversationHistory.push({
-
-    role: "user",
-
-    content: message
-
-  });
-
-
-  saveChatHistory();
-
-
-  /*
-   * Display thinking message.
-   */
-
-  const thinkingMessage =
-    addAssistantMessage(
-      "Thinking..."
-    );
-
-
-  try {
-
-    /*
-     * Send conversation history
-     * to Cloudflare Worker.
-     */
-
-    const response =
-      await fetch(
-        `${WORKER_URL}/chat`,
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body: JSON.stringify({
-
-            messages:
-              conversationHistory
-
-          })
-
-        }
-      );
+    event.preventDefault();
 
 
     /*
-     * Parse response.
+     * Get user message.
      */
 
-    const data =
-      await response
-        .json()
-        .catch(
-          () => ({})
-        );
+    const message =
+      userInput.value.trim();
 
 
-    /*
-     * Handle errors.
-     */
-
-    if (!response.ok) {
-
-      console.error(
-        "Chat Worker error:",
-        data
-      );
-
-
-      throw new Error(
-        getApiErrorMessage(
-          data,
-          "Chat request failed."
-        )
-      );
-
+    if (!message) {
+      return;
     }
 
 
     /*
-     * IMPORTANT:
-     *
-     * Your Cloudflare Worker returns the OpenAI
-     * Chat Completions response directly.
-     *
-     * Therefore the answer is located at:
-     *
-     * data.choices[0].message.content
+     * Display user message.
      */
 
-    const answer =
-      extractAssistantMessage(
-        data
-      );
-
-
-    if (!answer) {
-
-      console.error(
-        "Unexpected chat response:",
-        data
-      );
-
-
-      throw new Error(
-        "The Worker returned an empty response."
-      );
-
-    }
-
-
-    /*
-     * Remove thinking message.
-     */
-
-    thinkingMessage.remove();
-
-
-    /*
-     * Display AI response.
-     */
-
-    addAssistantMessage(
-      answer
+    addUserMessage(
+      message
     );
 
 
     /*
-     * Save AI response.
+     * Clear input.
+     */
+
+    userInput.value = "";
+
+
+    /*
+     * Save user message.
      */
 
     conversationHistory.push({
-
-      role: "assistant",
-
-      content: answer
-
+      role: "user",
+      content: message
     });
-
 
     saveChatHistory();
 
 
-  } catch (error) {
+    /*
+     * Display thinking message.
+     */
 
-    console.error(
-      "Chat error:",
-      error
-    );
+    const thinkingMessage =
+      addAssistantMessage(
+        "Thinking..."
+      );
 
 
-    thinkingMessage.textContent =
-      `Sorry, I couldn't reach the beauty advisor. ${
-        error.message ||
-        "Please try again."
-      }`;
+    try {
 
+      /*
+       * Send conversation history
+       * to Cloudflare Worker.
+       */
+
+      const response =
+        await fetch(
+          `${WORKER_URL}/chat`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+              messages:
+                conversationHistory
+            })
+          }
+        );
+
+
+      /*
+       * Read Worker response.
+       */
+
+      const data =
+        await readJsonResponse(
+          response
+        );
+
+
+      console.log(
+        "Chat response from Worker:",
+        data
+      );
+
+
+      /*
+       * Handle Worker/OpenAI errors.
+       */
+
+      if (!response.ok) {
+
+        const workerError =
+          getWorkerErrorMessage(
+            data
+          );
+
+        throw new Error(
+          workerError
+        );
+      }
+
+
+      /*
+       * IMPORTANT:
+       *
+       * Worker returns:
+       *
+       * {
+       *   answer: "..."
+       * }
+       */
+
+      const answer =
+        extractAnswer(
+          data
+        );
+
+
+      /*
+       * Make sure response exists.
+       */
+
+      if (!answer) {
+
+        console.error(
+          "Unexpected chat response:",
+          data
+        );
+
+        throw new Error(
+          "The Worker returned an empty response."
+        );
+      }
+
+
+      /*
+       * Remove Thinking...
+       */
+
+      thinkingMessage.remove();
+
+
+      /*
+       * Display AI response.
+       */
+
+      addAssistantMessage(
+        answer
+      );
+
+
+      /*
+       * Save AI response.
+       */
+
+      conversationHistory.push({
+        role: "assistant",
+        content: answer
+      });
+
+      saveChatHistory();
+
+
+    } catch (error) {
+
+      console.error(
+        "Chat request error:",
+        error
+      );
+
+
+      thinkingMessage.textContent =
+        `Sorry, I couldn't reach the beauty advisor. ${error.message || "Please try again."}`;
+    }
+  }
+);
+
+
+/* =========================================================
+   READ JSON RESPONSE
+   ========================================================= */
+
+async function readJsonResponse(
+  response
+) {
+
+  const contentType =
+    response.headers.get(
+      "content-type"
+    ) || "";
+
+
+  /*
+   * Normally the Worker returns JSON.
+   */
+
+  if (
+    contentType.includes(
+      "application/json"
+    )
+  ) {
+    return await response.json();
   }
 
+
+  /*
+   * If Cloudflare returns plain text
+   * or an unexpected response.
+   */
+
+  const text =
+    await response.text();
+
+  return {
+    error:
+      text ||
+      `HTTP ${response.status}`
+  };
 }
 
 
 /* =========================================================
-   EXTRACT ASSISTANT MESSAGE
+   EXTRACT WORKER ANSWER
    ========================================================= */
 
-function extractAssistantMessage(data) {
+function extractAnswer(
+  data
+) {
+
+  if (!data) {
+    return "";
+  }
+
 
   /*
-   * Primary format returned by:
+   * PRIMARY FORMAT:
    *
-   * POST https://api.openai.com/v1/chat/completions
+   * Cloudflare Worker:
+   *
+   * {
+   *   answer: "..."
+   * }
    */
 
-  const chatCompletionMessage =
-    data
-      ?.choices
-      ?. [0]
-      ?.message
-      ?.content;
-
-
   if (
-    typeof chatCompletionMessage ===
-    "string" &&
-    chatCompletionMessage.trim()
+    typeof data.answer ===
+    "string"
   ) {
-
-    return chatCompletionMessage.trim();
-
+    return data.answer.trim();
   }
 
 
   /*
-   * Support alternate response formats
-   * in case the Worker is changed later.
+   * Compatibility fallbacks.
    */
 
   if (
-    typeof data?.text ===
-    "string" &&
-    data.text.trim()
+    typeof data.text ===
+    "string"
   ) {
-
     return data.text.trim();
-
   }
 
 
   if (
-    typeof data?.output ===
-    "string" &&
-    data.output.trim()
+    typeof data.output ===
+    "string"
   ) {
-
     return data.output.trim();
-
   }
 
 
   if (
-    typeof data?.response ===
-    "string" &&
-    data.response.trim()
+    typeof data.response ===
+    "string"
   ) {
-
     return data.response.trim();
+  }
 
+
+  /*
+   * Compatibility with a raw
+   * OpenAI Chat Completions response.
+   */
+
+  if (
+    data.choices &&
+    Array.isArray(
+      data.choices
+    ) &&
+    data.choices[0] &&
+    data.choices[0].message &&
+    typeof data.choices[0].message.content ===
+      "string"
+  ) {
+    return data.choices[0].message.content.trim();
   }
 
 
   return "";
-
 }
 
 
 /* =========================================================
-   API ERROR MESSAGE
+   GET WORKER ERROR MESSAGE
    ========================================================= */
 
-function getApiErrorMessage(
-  data,
-  fallback
+function getWorkerErrorMessage(
+  data
 ) {
 
-  /*
-   * OpenAI error format:
-   *
-   * {
-   *   error: {
-   *     message: "..."
-   *   }
-   * }
-   */
-
-  if (
-    typeof data?.error?.message ===
-    "string"
-  ) {
-
-    return data.error.message;
-
+  if (!data) {
+    return "The Cloudflare Worker returned an unknown error.";
   }
 
 
-  /*
-   * Worker may return:
-   *
-   * {
-   *   error: "..."
-   * }
-   */
-
   if (
-    typeof data?.error ===
+    typeof data.error ===
     "string"
   ) {
-
     return data.error;
-
   }
 
-
-  /*
-   * Nested error format.
-   */
 
   if (
-    typeof data
-      ?.details
-      ?.error
-      ?.message ===
-    "string"
+    data.error &&
+    typeof data.error.message ===
+      "string"
   ) {
-
-    return data.details.error.message;
-
+    return data.error.message;
   }
 
 
-  return fallback;
+  if (
+    data.details &&
+    typeof data.details.message ===
+      "string"
+  ) {
+    return data.details.message;
+  }
 
+
+  if (
+    data.details &&
+    data.details.error &&
+    typeof data.details.error.message ===
+      "string"
+  ) {
+    return data.details.error.message;
+  }
+
+
+  return "The Cloudflare Worker returned an error.";
 }
 
 
@@ -1616,37 +1446,26 @@ function getApiErrorMessage(
    USER CHAT MESSAGE
    ========================================================= */
 
-function addUserMessage(text) {
-
-  if (!chatWindow) {
-    return null;
-  }
-
+function addUserMessage(
+  text
+) {
 
   const message =
     document.createElement(
       "div"
     );
 
-
   message.className =
     "chat-message user";
 
-
   message.textContent =
     text;
-
 
   chatWindow.appendChild(
     message
   );
 
-
   scrollChat();
-
-
-  return message;
-
 }
 
 
@@ -1654,62 +1473,28 @@ function addUserMessage(text) {
    ASSISTANT CHAT MESSAGE
    ========================================================= */
 
-function addAssistantMessage(text) {
-
-  if (!chatWindow) {
-    return null;
-  }
-
-
-  /*
-   * Remove welcome message when the
-   * first real assistant message appears.
-   */
-
-  const welcome =
-    chatWindow.querySelector(
-      ".welcome-message"
-    );
-
-
-  if (welcome) {
-
-    welcome.remove();
-
-  }
-
+function addAssistantMessage(
+  text
+) {
 
   const message =
     document.createElement(
       "div"
     );
 
-
   message.className =
     "chat-message assistant";
 
-
-  /*
-   * textContent is intentional.
-   *
-   * It prevents AI-generated HTML from
-   * being inserted directly into the page.
-   */
-
   message.textContent =
     text;
-
 
   chatWindow.appendChild(
     message
   );
 
-
   scrollChat();
 
-
   return message;
-
 }
 
 
@@ -1719,41 +1504,8 @@ function addAssistantMessage(text) {
 
 function scrollChat() {
 
-  if (!chatWindow) {
-    return;
-  }
-
-
   chatWindow.scrollTop =
     chatWindow.scrollHeight;
-
-}
-
-
-/* =========================================================
-   SAVE CHAT HISTORY
-   ========================================================= */
-
-function saveChatHistory() {
-
-  try {
-
-    localStorage.setItem(
-      CHAT_STORAGE_KEY,
-      JSON.stringify(
-        conversationHistory
-      )
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Unable to save chat history:",
-      error
-    );
-
-  }
-
 }
 
 
@@ -1763,11 +1515,6 @@ function saveChatHistory() {
 
 function restoreChat() {
 
-  if (!chatWindow) {
-    return;
-  }
-
-
   /*
    * Nothing to restore.
    */
@@ -1775,14 +1522,12 @@ function restoreChat() {
   if (
     !conversationHistory.length
   ) {
-
     return;
-
   }
 
 
   /*
-   * Hide welcome message.
+   * Remove welcome message.
    */
 
   const welcome =
@@ -1790,16 +1535,13 @@ function restoreChat() {
       ".welcome-message"
     );
 
-
   if (welcome) {
-
     welcome.remove();
-
   }
 
 
   /*
-   * Restore saved conversation.
+   * Restore messages.
    */
 
   conversationHistory.forEach(
@@ -1807,42 +1549,38 @@ function restoreChat() {
 
       if (
         !message ||
+        !message.role ||
         typeof message.content !==
-        "string"
+          "string"
       ) {
-
         return;
-
       }
 
 
       if (
-        message.role === "user"
+        message.role ===
+        "user"
       ) {
 
         addUserMessage(
           message.content
         );
 
+        return;
       }
 
 
       if (
-        message.role === "assistant"
+        message.role ===
+        "assistant"
       ) {
 
         addAssistantMessage(
           message.content
         );
-
       }
-
     }
   );
-
-
-  scrollChat();
-
 }
 
 
@@ -1850,46 +1588,27 @@ function restoreChat() {
    RTL LANGUAGE SUPPORT
    ========================================================= */
 
-if (rtlToggle) {
+rtlToggle.addEventListener(
+  "click",
+  () => {
 
-  rtlToggle.addEventListener(
-    "click",
-    () => {
+    const html =
+      document.documentElement;
 
-      const html =
-        document.documentElement;
+    const newDirection =
+      html.dir === "rtl"
+        ? "ltr"
+        : "rtl";
 
+    html.dir =
+      newDirection;
 
-      const newDirection =
-        html.dir === "rtl"
-          ? "ltr"
-          : "rtl";
-
-
-      html.dir =
-        newDirection;
-
-
-      try {
-
-        localStorage.setItem(
-          DIRECTION_STORAGE_KEY,
-          newDirection
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Unable to save direction:",
-          error
-        );
-
-      }
-
-    }
-  );
-
-}
+    localStorage.setItem(
+      DIRECTION_STORAGE_KEY,
+      newDirection
+    );
+  }
+);
 
 
 /* =========================================================
@@ -1898,33 +1617,19 @@ if (rtlToggle) {
 
 function restoreDirection() {
 
-  try {
-
-    const savedDirection =
-      localStorage.getItem(
-        DIRECTION_STORAGE_KEY
-      );
-
-
-    if (
-      savedDirection === "rtl" ||
-      savedDirection === "ltr"
-    ) {
-
-      document.documentElement.dir =
-        savedDirection;
-
-    }
-
-  } catch (error) {
-
-    console.error(
-      "Unable to restore direction:",
-      error
+  const savedDirection =
+    localStorage.getItem(
+      DIRECTION_STORAGE_KEY
     );
 
-  }
+  if (
+    savedDirection === "rtl" ||
+    savedDirection === "ltr"
+  ) {
 
+    document.documentElement.dir =
+      savedDirection;
+  }
 }
 
 
@@ -1932,7 +1637,9 @@ function restoreDirection() {
    SECURITY HELPER
    ========================================================= */
 
-function escapeHtml(value) {
+function escapeHtml(
+  value
+) {
 
   return String(
     value ?? ""
@@ -1962,7 +1669,6 @@ function escapeHtml(value) {
       "'",
       "&#039;"
     );
-
 }
 
 
