@@ -14,11 +14,6 @@
   --cream: #faf8f5;
 }
 
-
-/* ================================
-   RESET
-================================ */
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -68,11 +63,6 @@ button {
   width: min(94%, 1180px);
   margin: 0 auto;
 }
-
-
-/* ================================
-   HEADER
-================================ */
 
 .site-header {
   padding: 34px 0 70px;
@@ -166,11 +156,6 @@ button {
   line-height: 1.7;
 }
 
-
-/* ================================
-   SECTION HEADERS
-================================ */
-
 .section-heading,
 .selected-header,
 .chat-heading {
@@ -201,11 +186,6 @@ button {
 
   font-size: 13px;
 }
-
-
-/* ================================
-   SEARCH / FILTER
-================================ */
 
 .filters {
   display: grid;
@@ -272,11 +252,6 @@ button {
     rgba(255, 0, 59, 0.08);
 }
 
-
-/* ================================
-   PRODUCT GRID
-================================ */
-
 .products-grid {
   display: grid;
 
@@ -336,8 +311,6 @@ button {
 }
 
 
-/* PRODUCT IMAGE */
-
 .product-image-wrap {
   position: relative;
 
@@ -373,8 +346,6 @@ button {
 }
 
 
-/* SELECTED CHECK */
-
 .selected-badge {
   position: absolute;
 
@@ -400,8 +371,6 @@ button {
   z-index: 2;
 }
 
-
-/* PRODUCT INFO */
 
 .product-info {
   display: flex;
@@ -432,8 +401,6 @@ button {
   line-height: 1.35;
 }
 
-
-/* PRODUCT BUTTONS */
 
 .product-actions {
   display: flex;
@@ -503,11 +470,6 @@ button {
   color: var(--gold);
 }
 
-
-/* ================================
-   DESCRIPTION
-================================ */
-
 .product-description {
   margin-top: 12px;
 
@@ -543,10 +505,6 @@ button {
   text-align: center;
 }
 
-
-/* ================================
-   SELECTED PRODUCTS
-================================ */
 
 .selected-products {
   margin: 80px 0;
@@ -659,8 +617,6 @@ button {
 }
 
 
-/* GENERATE BUTTON */
-
 .generate-btn {
   width: 100%;
 
@@ -705,11 +661,6 @@ button {
 
   cursor: wait;
 }
-
-
-/* ================================
-   CHAT
-================================ */
 
 .chatbox {
   margin-bottom: 80px;
@@ -758,8 +709,6 @@ button {
     0 0 10px var(--gold);
 }
 
-
-/* CHAT WINDOW */
 
 .chat-window {
   height: 420px;
@@ -814,9 +763,6 @@ button {
   background: var(--red);
 }
 
-
-/* CHAT MESSAGES */
-
 .chat-message {
   max-width: 80%;
 
@@ -849,8 +795,6 @@ button {
   color: #eeeeee;
 }
 
-
-/* CHAT FORM */
 
 .chat-form {
   display: flex;
@@ -905,10 +849,6 @@ button {
   background: var(--gold);
 }
 
-
-/* ================================
-   FOOTER
-================================ */
 
 .site-footer {
   display: flex;
@@ -969,10 +909,6 @@ button {
 }
 
 
-/* ================================
-   RTL
-================================ */
-
 html[dir="rtl"] {
   text-align: right;
 }
@@ -999,10 +935,6 @@ html[dir="rtl"] .chat-message.user {
 }
 
 
-/* ================================
-   ACCESSIBILITY
-================================ */
-
 .visually-hidden {
   position: absolute;
 
@@ -1021,10 +953,6 @@ html[dir="rtl"] .chat-message.user {
   border: 0;
 }
 
-
-/* ================================
-   MOBILE
-================================ */
 
 @media (max-width: 850px) {
 

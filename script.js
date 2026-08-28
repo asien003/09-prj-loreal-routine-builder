@@ -1,25 +1,5 @@
-/* =========================================================
-   L'ORÉAL SMART ROUTINE & PRODUCT ADVISOR
-   ========================================================= */
-
-
-/* =========================================================
-   CONFIGURATION
-   ========================================================= */
-
-/*
- * Cloudflare Worker URL
- *
- * DO NOT put your OpenAI API key here.
- */
-
 const WORKER_URL =
   "https://08-prj-loreal-chatbot.asien003.workers.dev";
-
-
-/* =========================================================
-   LOCAL STORAGE KEYS
-   ========================================================= */
 
 const PRODUCTS_STORAGE_KEY =
   "loreal-selected-products";
@@ -29,11 +9,6 @@ const CHAT_STORAGE_KEY =
 
 const DIRECTION_STORAGE_KEY =
   "loreal-direction";
-
-
-/* =========================================================
-   DOM ELEMENTS
-   ========================================================= */
 
 const categoryFilter =
   document.getElementById("categoryFilter");
@@ -68,11 +43,6 @@ const userInput =
 const rtlToggle =
   document.getElementById("rtlToggle");
 
-
-/* =========================================================
-   APPLICATION STATE
-   ========================================================= */
-
 let allProducts = [];
 
 let selectedProductIds =
@@ -80,11 +50,6 @@ let selectedProductIds =
 
 let conversationHistory =
   loadConversationHistory();
-
-
-/* =========================================================
-   SAFE LOCAL STORAGE LOADING
-   ========================================================= */
 
 function loadSelectedProductIds() {
 
@@ -119,7 +84,6 @@ function loadSelectedProductIds() {
 
 }
 
-
 function loadConversationHistory() {
 
   try {
@@ -139,10 +103,6 @@ function loadConversationHistory() {
     if (!Array.isArray(parsed)) {
       return [];
     }
-
-    /*
-     * Only keep valid OpenAI-style messages.
-     */
 
     return parsed.filter(
       (message) =>
@@ -165,25 +125,6 @@ function loadConversationHistory() {
   }
 
 }
-
-
-/* =========================================================
-   WORKER REQUEST HELPER
-   ========================================================= */
-
-/*
- * Sends a messages array to the Cloudflare Worker.
- *
- * The Worker returns:
- *
- * {
- *   answer: "..."
- * }
- *
- * Therefore this function always extracts:
- *
- * data.answer
- */
 
 async function callWorker(
   endpoint,
@@ -211,12 +152,6 @@ async function callWorker(
       }
     );
 
-
-  /*
-   * Try to read JSON regardless of
-   * whether the request succeeded.
-   */
-
   let data = {};
 
   try {
@@ -237,11 +172,6 @@ async function callWorker(
 
   }
 
-
-  /*
-   * Worker/OpenAI returned an error.
-   */
-
   if (!response.ok) {
 
     console.error(
@@ -261,23 +191,6 @@ async function callWorker(
     );
 
   }
-
-
-  /*
-   * IMPORTANT:
-   *
-   * Your Cloudflare Worker returns:
-   *
-   * {
-   *   answer: "..."
-   * }
-   *
-   * NOT:
-   *
-   * {
-   *   choices: [...]
-   * }
-   */
 
   const answer =
     typeof data.answer === "string"
@@ -302,11 +215,6 @@ async function callWorker(
   return answer;
 
 }
-
-
-/* =========================================================
-   LOAD PRODUCTS
-   ========================================================= */
 
 async function loadProducts() {
 
@@ -377,10 +285,6 @@ async function loadProducts() {
 }
 
 
-/* =========================================================
-   FILTER PRODUCTS
-   ========================================================= */
-
 function getFilteredProducts() {
 
   if (!categoryFilter || !productSearch) {
@@ -439,11 +343,6 @@ function getFilteredProducts() {
 
 }
 
-
-/* =========================================================
-   DISPLAY PRODUCTS
-   ========================================================= */
-
 function renderProducts() {
 
   if (!productsContainer) {
@@ -465,11 +364,6 @@ function renderProducts() {
       }`;
 
   }
-
-
-  /*
-   * No products found.
-   */
 
   if (!products.length) {
 
@@ -494,11 +388,6 @@ function renderProducts() {
     return;
 
   }
-
-
-  /*
-   * Render product cards.
-   */
 
   productsContainer.innerHTML =
     products
@@ -633,21 +522,11 @@ function renderProducts() {
 
 }
 
-
-/* =========================================================
-   PRODUCT CARD CLICK EVENTS
-   ========================================================= */
-
 if (productsContainer) {
 
   productsContainer.addEventListener(
     "click",
     (event) => {
-
-      /*
-       * Select / unselect button.
-       */
-
       const selectButton =
         event.target.closest(
           "[data-select]"
@@ -672,11 +551,6 @@ if (productsContainer) {
         return;
 
       }
-
-
-      /*
-       * Product details button.
-       */
 
       const detailsButton =
         event.target.closest(
@@ -714,12 +588,6 @@ if (productsContainer) {
 
       }
 
-
-      /*
-       * Clicking the card itself selects
-       * the product.
-       */
-
       const card =
         event.target.closest(
           ".product-card"
@@ -748,16 +616,7 @@ if (productsContainer) {
 }
 
 
-/* =========================================================
-   NORMALIZE PRODUCT ID
-   ========================================================= */
-
 function normalizeProductId(value) {
-
-  /*
-   * If your product IDs are numbers,
-   * convert them to numbers.
-   */
 
   const numberValue =
     Number(value);
@@ -766,11 +625,6 @@ function normalizeProductId(value) {
   if (!Number.isNaN(numberValue)) {
     return numberValue;
   }
-
-
-  /*
-   * Otherwise keep string IDs.
-   */
 
   if (
     typeof value === "string" &&
@@ -786,11 +640,6 @@ function normalizeProductId(value) {
 
 }
 
-
-/* =========================================================
-   SELECT / UNSELECT PRODUCT
-   ========================================================= */
-
 function toggleProduct(id) {
 
   const index =
@@ -799,20 +648,12 @@ function toggleProduct(id) {
 
   if (index !== -1) {
 
-    /*
-     * Remove product.
-     */
-
     selectedProductIds.splice(
       index,
       1
     );
 
   } else {
-
-    /*
-     * Add product.
-     */
 
     selectedProductIds.push(id);
 
@@ -827,11 +668,6 @@ function toggleProduct(id) {
 
 }
 
-
-/* =========================================================
-   GET SELECTED PRODUCTS
-   ========================================================= */
-
 function getSelectedProducts() {
 
   return allProducts.filter(
@@ -843,11 +679,6 @@ function getSelectedProducts() {
 
 }
 
-
-/* =========================================================
-   DISPLAY SELECTED PRODUCTS
-   ========================================================= */
-
 function renderSelectedProducts() {
 
   if (!selectedProductsList) {
@@ -857,11 +688,6 @@ function renderSelectedProducts() {
 
   const selectedProducts =
     getSelectedProducts();
-
-
-  /*
-   * Nothing selected.
-   */
 
   if (!selectedProducts.length) {
 
@@ -883,11 +709,6 @@ function renderSelectedProducts() {
     return;
 
   }
-
-
-  /*
-   * Display selected products.
-   */
 
   selectedProductsList.innerHTML =
     selectedProducts
@@ -928,11 +749,6 @@ function renderSelectedProducts() {
 
 }
 
-
-/* =========================================================
-   REMOVE FROM SELECTED LIST
-   ========================================================= */
-
 if (selectedProductsList) {
 
   selectedProductsList.addEventListener(
@@ -967,11 +783,6 @@ if (selectedProductsList) {
 
 }
 
-
-/* =========================================================
-   CLEAR ALL SELECTIONS
-   ========================================================= */
-
 if (clearSelectionsBtn) {
 
   clearSelectionsBtn.addEventListener(
@@ -991,11 +802,6 @@ if (clearSelectionsBtn) {
   );
 
 }
-
-
-/* =========================================================
-   SAVE PRODUCT SELECTIONS
-   ========================================================= */
 
 function saveSelections() {
 
@@ -1019,11 +825,6 @@ function saveSelections() {
 
 }
 
-
-/* =========================================================
-   SEARCH / FILTER EVENTS
-   ========================================================= */
-
 if (categoryFilter) {
 
   categoryFilter.addEventListener(
@@ -1043,11 +844,6 @@ if (productSearch) {
 
 }
 
-
-/* =========================================================
-   GENERATE PERSONALIZED ROUTINE
-   ========================================================= */
-
 if (generateRoutineBtn) {
 
   generateRoutineBtn.addEventListener(
@@ -1060,17 +856,8 @@ if (generateRoutineBtn) {
 
 async function generateRoutine() {
 
-  /*
-   * Get selected products.
-   */
-
   const selectedProducts =
     getSelectedProducts();
-
-
-  /*
-   * Require at least one product.
-   */
 
   if (!selectedProducts.length) {
 
@@ -1081,11 +868,6 @@ async function generateRoutine() {
     return;
 
   }
-
-
-  /*
-   * Send only the useful product information.
-   */
 
   const productData =
     selectedProducts.map(
@@ -1103,11 +885,6 @@ async function generateRoutine() {
           product.description || ""
       })
     );
-
-
-  /*
-   * Create the AI instructions.
-   */
 
   const routineMessages = [
 
@@ -1159,11 +936,6 @@ ${JSON.stringify(
 
   ];
 
-
-  /*
-   * Disable button.
-   */
-
   generateRoutineBtn.disabled =
     true;
 
@@ -1176,11 +948,6 @@ ${JSON.stringify(
     Creating Your Routine...
   `;
 
-
-  /*
-   * Display loading message.
-   */
-
   const thinkingMessage =
     addAssistantMessage(
       "I'm creating your personalized routine..."
@@ -1189,63 +956,21 @@ ${JSON.stringify(
 
   try {
 
-    /*
-     * Call Cloudflare Worker.
-     *
-     * The Worker expects:
-     *
-     * POST /routine
-     *
-     * {
-     *   messages: [...]
-     * }
-     */
-
     const routine =
       await callWorker(
         "/routine",
         routineMessages
       );
 
-
-    /*
-     * IMPORTANT:
-     *
-     * The Worker returns:
-     *
-     * {
-     *   answer: "..."
-     * }
-     *
-     * callWorker() already extracts
-     * data.answer.
-     */
-
-
     console.log(
       "Routine generated successfully."
     );
 
-
-    /*
-     * Remove loading message.
-     */
-
     thinkingMessage.remove();
-
-
-    /*
-     * Display routine.
-     */
 
     addAssistantMessage(
       routine
     );
-
-
-    /*
-     * Save routine in chat history.
-     */
 
     conversationHistory.push({
       role: "assistant",
@@ -1263,20 +988,11 @@ ${JSON.stringify(
       error
     );
 
-
-    /*
-     * Keep the error visible.
-     */
-
     thinkingMessage.textContent =
       `Sorry — I couldn't generate your routine. ${error.message}`;
 
 
   } finally {
-
-    /*
-     * Re-enable button.
-     */
 
     generateRoutineBtn.disabled =
       false;
@@ -1293,11 +1009,6 @@ ${JSON.stringify(
   }
 
 }
-
-
-/* =========================================================
-   CHAT FORM
-   ========================================================= */
 
 if (chatForm) {
 
@@ -1327,26 +1038,11 @@ async function handleChatSubmit(event) {
     return;
   }
 
-
-  /*
-   * Display user's message.
-   */
-
   addUserMessage(
     message
   );
 
-
-  /*
-   * Clear input.
-   */
-
   userInput.value = "";
-
-
-  /*
-   * Add message to history.
-   */
 
   conversationHistory.push({
     role: "user",
@@ -1356,11 +1052,6 @@ async function handleChatSubmit(event) {
 
   saveChatHistory();
 
-
-  /*
-   * Show thinking message.
-   */
-
   const thinkingMessage =
     addAssistantMessage(
       "Thinking..."
@@ -1369,37 +1060,17 @@ async function handleChatSubmit(event) {
 
   try {
 
-    /*
-     * Send conversation history
-     * to Cloudflare Worker.
-     */
-
     const answer =
       await callWorker(
         "/chat",
         conversationHistory
       );
 
-
-    /*
-     * Remove thinking message.
-     */
-
     thinkingMessage.remove();
-
-
-    /*
-     * Display AI answer.
-     */
 
     addAssistantMessage(
       answer
     );
-
-
-    /*
-     * Save AI answer.
-     */
 
     conversationHistory.push({
       role: "assistant",
@@ -1425,11 +1096,6 @@ async function handleChatSubmit(event) {
 
 }
 
-
-/* =========================================================
-   USER CHAT MESSAGE
-   ========================================================= */
-
 function addUserMessage(text) {
 
   if (!chatWindow) {
@@ -1446,11 +1112,6 @@ function addUserMessage(text) {
   message.className =
     "chat-message user";
 
-
-  /*
-   * textContent prevents HTML injection.
-   */
-
   message.textContent =
     text;
 
@@ -1466,11 +1127,6 @@ function addUserMessage(text) {
   return message;
 
 }
-
-
-/* =========================================================
-   ASSISTANT CHAT MESSAGE
-   ========================================================= */
 
 function addAssistantMessage(text) {
 
@@ -1488,11 +1144,6 @@ function addAssistantMessage(text) {
   message.className =
     "chat-message assistant";
 
-
-  /*
-   * textContent prevents HTML injection.
-   */
-
   message.textContent =
     text;
 
@@ -1509,11 +1160,6 @@ function addAssistantMessage(text) {
 
 }
 
-
-/* =========================================================
-   SCROLL CHAT TO BOTTOM
-   ========================================================= */
-
 function scrollChat() {
 
   if (!chatWindow) {
@@ -1525,11 +1171,6 @@ function scrollChat() {
     chatWindow.scrollHeight;
 
 }
-
-
-/* =========================================================
-   SAVE CHAT HISTORY
-   ========================================================= */
 
 function saveChatHistory() {
 
@@ -1553,32 +1194,15 @@ function saveChatHistory() {
 
 }
 
-
-/* =========================================================
-   RESTORE CHAT HISTORY
-   ========================================================= */
-
 function restoreChat() {
 
   if (!chatWindow) {
     return;
   }
 
-
-  /*
-   * Don't display anything if
-   * there is no saved conversation.
-   */
-
   if (!conversationHistory.length) {
     return;
   }
-
-
-  /*
-   * Remove welcome message.
-   */
-
   const welcome =
     chatWindow.querySelector(
       ".welcome-message"
@@ -1590,11 +1214,6 @@ function restoreChat() {
     welcome.remove();
 
   }
-
-
-  /*
-   * Restore previous messages.
-   */
 
   conversationHistory.forEach(
     (message) => {
@@ -1624,11 +1243,6 @@ function restoreChat() {
   );
 
 }
-
-
-/* =========================================================
-   RTL LANGUAGE SUPPORT
-   ========================================================= */
 
 if (rtlToggle) {
 
@@ -1671,11 +1285,6 @@ if (rtlToggle) {
 
 }
 
-
-/* =========================================================
-   RESTORE RTL SETTING
-   ========================================================= */
-
 function restoreDirection() {
 
   try {
@@ -1706,11 +1315,6 @@ function restoreDirection() {
   }
 
 }
-
-
-/* =========================================================
-   SECURITY HELPER
-   ========================================================= */
 
 function escapeHtml(value) {
 
@@ -1744,11 +1348,6 @@ function escapeHtml(value) {
     );
 
 }
-
-
-/* =========================================================
-   START APPLICATION
-   ========================================================= */
 
 restoreDirection();
 
