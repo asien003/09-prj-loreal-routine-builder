@@ -19,7 +19,7 @@
  */
 
 const WORKER_URL =
-  "https://08-prj-loreal-chatbot.asien003.workers.dev/";
+  "https://08-prj-loreal-chatbot.asien003.workers.dev";
 
 
 /* LocalStorage keys */
@@ -815,32 +815,71 @@ generateRoutineBtn.addEventListener(
        * to Cloudflare Worker.
        */
 
-      const response =
-        await fetch(
-          `${WORKER_URL}/routine`,
-          {
-            method: "POST",
+      const routineMessages = [
+  {
+    role: "system",
+    content: `
+You are an expert L'Oréal beauty advisor.
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
+Create a personalized beauty routine using ONLY the products provided by the user.
 
-            body: JSON.stringify({
-              products:
-                productData
-            })
-          }
-        );
+Explain:
+1. The order in which the products should be used.
+2. Whether each product should be used in the morning, evening, or both.
+3. How often each product should be used.
+4. Any important usage or compatibility considerations.
+
+Organize the routine clearly and make it easy for the user to follow.
+
+The user's selected products are provided below.
+`
+  },
+  {
+    role: "user",
+    content: `
+Please create my personalized routine using these selected products:
+
+${JSON.stringify(productData, null, 2)}
+`
+  }
+];
+
+const response =
+  await fetch(
+    `${WORKER_URL}/routine`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
+
+      body: JSON.stringify({
+        messages:
+          routineMessages
+      })
+    }
+  );
 
 
       if (!response.ok) {
 
-        throw new Error(
-          "Routine request failed."
-        );
+  const errorData =
+    await response.json().catch(() => ({}));
 
-      }
+  console.error(
+    "Worker error:",
+    errorData
+  );
+
+  throw new Error(
+    errorData.error ||
+    errorData.details?.error?.message ||
+    "Routine request failed."
+  );
+
+}
 
 
       const data =
@@ -853,10 +892,8 @@ generateRoutineBtn.addEventListener(
        */
 
       const routine =
-        data.text ||
-        data.output ||
-        data.response ||
-        "I couldn't generate your routine.";
+  data.choices?.[0]?.message?.content ||
+  "I couldn't generate your routine.";
 
 
       /*
