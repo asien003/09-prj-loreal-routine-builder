@@ -19,7 +19,7 @@
  */
 
 const WORKER_URL =
-  "https://09-prj-loreal-routine-builder.asien003.workers.dev/";
+  "https://08-prj-loreal-chatbot.asien003.workers.dev/";
 
 
 /* LocalStorage keys */
